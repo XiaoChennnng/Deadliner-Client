@@ -31,3 +31,12 @@
 - Better SQLite3 - 本地数据库
 - Electron Store - 应用配置存储
 
+# 安装
+   ```bash
+   git clone https://github.com/XiaoChennnng/Deadliner-Client.git
+   ```
+# 贡献
+欢迎任何形式的贡献！请提交 Issue 或 Pull Request，以改进功能或修复 Bug。
+
+# 许可证
+本项目基于 MIT 许可证，详情请参见 [LICENSE](LICENSE)。
