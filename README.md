@@ -2,7 +2,7 @@
 一个简洁高效Deadline管理记录软件，客户端受AritxOnly委托开发，
 原仓库地址：https://github.com/AritxOnly/Deadliner
 
-# 功能
+## 功能
 - 添加、编辑、删除：管理任务（Task）和习惯（Habit）项目
 - 分类展示：按类型区分截止与习惯
 - 筛选与搜索：按名称、开始时间或已过时间筛选
@@ -11,7 +11,7 @@
 - 应用内更新检查：从 GitHub 拉取最新发布信息并提示下载／安装
 - 自定义界面：浅色／深色模式、主题配色、动画效果
 
-# 技术栈
+## 技术栈
 ### 前端框架
 - React 19.1.1 - 主要的前端框架
 - TypeScript 4.9.5 - 类型安全的JavaScript超集
@@ -31,12 +31,12 @@
 - Better SQLite3 - 本地数据库
 - Electron Store - 应用配置存储
 
-# 安装
+## 安装
    ```bash
    git clone https://github.com/XiaoChennnng/Deadliner-Client.git
    ```
-# 贡献
+## 贡献
 欢迎任何形式的贡献！请提交 Issue 或 Pull Request，以改进功能或修复 Bug。
 
-# 许可证
+## 许可证
 本项目基于 MIT 许可证，详情请参见 [LICENSE](LICENSE)。
