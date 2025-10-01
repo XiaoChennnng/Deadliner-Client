@@ -138,7 +138,6 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
   };
 
   const handleDelete = () => {
-    console.log('handleDelete called, selectedHabit:', selectedHabit);
     if (selectedHabit) {
       setHabitToDelete(selectedHabit);
       setDeleteDialogOpen(true);
@@ -146,17 +145,20 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
     handleMenuClose();
   };
 
-  const confirmDelete = () => {
-    console.log('confirmDelete called, habitToDelete:', habitToDelete);
+  const confirmDelete = async () => {
     if (habitToDelete) {
-      console.log('Dispatching DELETE_TASK for habit:', habitToDelete.id);
-      dispatch({ type: 'DELETE_TASK', payload: habitToDelete.id });
-      setDeleteDialogOpen(false);
-      setHabitToDelete(null);
-      setSelectedHabit(null);
-    } else {
-      console.error('No habitToDelete when trying to delete');
-      setDeleteDialogOpen(false);
+      try {
+        if (window.electron) {
+          await window.electron.storage.deleteTask(habitToDelete.id);
+        }
+        dispatch({ type: 'DELETE_TASK', payload: habitToDelete.id });
+        setDeleteDialogOpen(false);
+        setHabitToDelete(null);
+        setSelectedHabit(null);
+      } catch (error) {
+        console.error('Failed to delete habit:', error);
+        alert('删除失败,请重试');
+      }
     }
   };
 

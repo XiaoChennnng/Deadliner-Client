@@ -130,6 +130,15 @@ class DatabaseHelper {
     */
   }
 
+  /**
+   * 清理所有任务（用于调试）
+   */
+  clearAllTasks() {
+    console.log('[Database] Clearing all tasks');
+    const stmt = this.db.prepare('DELETE FROM tasks');
+    return stmt.run();
+  }
+
   // ==================== 任务CRUD操作 ====================
 
   /**
@@ -147,7 +156,7 @@ class DatabaseHelper {
     const now = Date.now();
     const tags = Array.isArray(task.tags) ? JSON.stringify(task.tags) : '[]';
 
-    return stmt.run(
+    const result = stmt.run(
       task.id,
       task.title,
       task.description || null,
@@ -167,6 +176,8 @@ class DatabaseHelper {
       1, // version
       'pending' // sync_status
     );
+
+    return result;
   }
 
   /**
@@ -178,7 +189,8 @@ class DatabaseHelper {
     `);
 
     const tasks = stmt.all();
-    return tasks.map(this.mapTaskFromDB);
+    const mappedTasks = tasks.map(task => this.mapTaskFromDB(task));
+    return mappedTasks;
   }
 
   /**
@@ -252,7 +264,8 @@ class DatabaseHelper {
       SET is_deleted = 1, updated_at = ?, version = version + 1, sync_status = ?
       WHERE id = ?
     `);
-    return stmt.run(Date.now(), 'pending', id);
+    const result = stmt.run(Date.now(), 'pending', id);
+    return result;
   }
 
   /**

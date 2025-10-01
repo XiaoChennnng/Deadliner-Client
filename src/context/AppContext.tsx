@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Task, Category } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -19,6 +19,9 @@ const initialState: AppState = {
   error: null,
 };
 
+// Check if we're in Electron environment
+const isElectron = typeof window !== 'undefined' && window.electron;
+
 // Action types
 export type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
@@ -33,6 +36,8 @@ export type AppAction =
   | { type: 'SELECT_TASK'; payload: string }
   | { type: 'DESELECT_TASK'; payload: string }
   | { type: 'CLEAR_SELECTED_TASKS' }
+  | { type: 'LOAD_TASKS'; payload: Task[] }
+  | { type: 'LOAD_CATEGORIES'; payload: Category[] }
   | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: string }
@@ -55,6 +60,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+
+    case 'LOAD_TASKS':
+      return { ...state, tasks: action.payload, loading: false };
+
+    case 'LOAD_CATEGORIES':
+      return { ...state, categories: action.payload };
 
     case 'SET_VIEW':
       return { ...state, currentView: action.payload };
@@ -101,9 +112,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_TASK':
       const newTask: Task = {
         ...action.payload,
-        id: uuidv4(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        id: action.payload.id || uuidv4(), // 如果 payload 中有 id 就使用,否则生成新的
+        createdAt: action.payload.createdAt || new Date(),
+        updatedAt: action.payload.updatedAt || new Date(),
       };
       return {
         ...state,
@@ -244,6 +255,44 @@ const AppContext = createContext<{
 // Provider component
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // Load tasks from database on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (isElectron) {
+        try {
+          dispatch({ type: 'SET_LOADING', payload: true });
+          const tasks = await window.electron.storage.getTasks();
+          const categories = await window.electron.storage.getCategories();
+          console.log('Loaded tasks from database:', tasks.length, 'tasks');
+          dispatch({ type: 'LOAD_TASKS', payload: tasks });
+          dispatch({ type: 'LOAD_CATEGORIES', payload: categories });
+        } catch (error) {
+          console.error('Failed to load data:', error);
+          dispatch({ type: 'SET_ERROR', payload: 'Failed to load data' });
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  // Sync tasks to database whenever they change
+  useEffect(() => {
+    if (isElectron && state.tasks.length > 0 && !state.loading) {
+      // This effect will run after tasks are loaded and modified
+      // We use a small delay to batch updates
+      const syncTimer = setTimeout(async () => {
+        try {
+          // The database operations will be handled by individual actions
+          // This is just to ensure we have the latest state
+        } catch (error) {
+          console.error('Failed to sync data:', error);
+        }
+      }, 100);
+      return () => clearTimeout(syncTimer);
+    }
+  }, [state.tasks, state.loading]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

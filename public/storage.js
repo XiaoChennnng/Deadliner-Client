@@ -31,6 +31,15 @@ class StorageService {
     }
   }
 
+  async clearAllTasks() {
+    try {
+      return this.db.clearAllTasks();
+    } catch (error) {
+      console.error('Error clearing tasks:', error);
+      throw error;
+    }
+  }
+
   async getTask(id) {
     try {
       return this.db.getTaskById(id);

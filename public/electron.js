@@ -80,6 +80,10 @@ ipcMain.handle('storage:getTasks', async () => {
   return await storageService.getTasks();
 });
 
+ipcMain.handle('storage:clearAllTasks', async () => {
+  return await storageService.clearAllTasks();
+});
+
 ipcMain.handle('storage:getTask', async (event, id) => {
   return await storageService.getTask(id);
 });

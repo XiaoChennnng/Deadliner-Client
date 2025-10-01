@@ -61,7 +61,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
     }
   }, [editingTask, isOpen, defaultType]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title.trim()) {
@@ -69,37 +69,69 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
       return;
     }
 
-    const taskData = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      type: formData.type,
-      priority: formData.priority,
-      category: 'personal',
-      deadline: formData.deadline || undefined,
-      tags: [],
-      isStarred: formData.isStarred,
-      completed: false,
-      isArchived: false,
-    };
+    try {
+      if (editingTask) {
+        // 更新任务
+        const taskData = {
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          type: formData.type,
+          priority: formData.priority,
+          category: 'personal',
+          deadline: formData.deadline || undefined,
+          tags: [],
+          isStarred: formData.isStarred,
+        };
 
-    if (editingTask) {
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: { id: editingTask.id, updates: taskData }
-      });
-    } else {
-      dispatch({ type: 'ADD_TASK', payload: taskData });
-    }
+        if (window.electron) {
+          await window.electron.storage.updateTask(editingTask.id, taskData);
+        }
+        dispatch({
+          type: 'UPDATE_TASK',
+          payload: { id: editingTask.id, updates: taskData }
+        });
+      } else {
+        // 创建新任务 - 先生成完整的任务对象(包含 id)
+        const now = new Date();
+        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    onClose();
-    resetForm();
+        const newTaskData = {
+          id: taskId,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          type: formData.type,
+          priority: formData.priority,
+          category: 'personal',
+          deadline: formData.deadline || undefined,
+          tags: [],
+          isStarred: formData.isStarred,
+          completed: false,
+          isArchived: false,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-    // 如果是新建任务/习惯，在对话框关闭后触发礼炮效果
-    if (!editingTask) {
-      setTimeout(() => {
-        console.log('🎉 触发礼炮动画');
+        // 先保存到数据库
+        if (window.electron) {
+          await window.electron.storage.createTask(newTaskData);
+        }
+
+        // 再添加到 Context
+        dispatch({ type: 'ADD_TASK', payload: newTaskData });
+      }
+
+      onClose();
+      resetForm();
+
+      // 如果是新建任务/习惯，在对话框关闭后触发礼炮效果
+      if (!editingTask) {
+        setTimeout(() => {
         triggerConfetti();
       }, 300);
+    }
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      alert('保存失败,请重试');
     }
   };
 

@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electron', {
   storage: {
     // Tasks
     getTasks: () => ipcRenderer.invoke('storage:getTasks'),
+    clearAllTasks: () => ipcRenderer.invoke('storage:clearAllTasks'),
     getTask: (id) => ipcRenderer.invoke('storage:getTask', id),
     createTask: (task) => ipcRenderer.invoke('storage:createTask', task),
     updateTask: (id, updates) => ipcRenderer.invoke('storage:updateTask', id, updates),

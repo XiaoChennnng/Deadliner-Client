@@ -50,12 +50,26 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onE
   const isSelected = state.selectedTasks.has(task.id);
   const category = state.categories.find(cat => cat.id === task.category);
 
-  const handleToggleComplete = () => {
-    dispatch({ type: 'TOGGLE_TASK_COMPLETION', payload: task.id });
+  const handleToggleComplete = async () => {
+    try {
+      if (window.electron) {
+        await window.electron.storage.updateTask(task.id, { completed: !task.completed });
+      }
+      dispatch({ type: 'TOGGLE_TASK_COMPLETION', payload: task.id });
+    } catch (error) {
+      console.error('Failed to toggle completion:', error);
+    }
   };
 
-  const handleToggleStar = () => {
-    dispatch({ type: 'TOGGLE_TASK_STAR', payload: task.id });
+  const handleToggleStar = async () => {
+    try {
+      if (window.electron) {
+        await window.electron.storage.updateTask(task.id, { isStarred: !task.isStarred });
+      }
+      dispatch({ type: 'TOGGLE_TASK_STAR', payload: task.id });
+    } catch (error) {
+      console.error('Failed to toggle star:', error);
+    }
   };
 
   const handleDelete = () => {
@@ -63,14 +77,32 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onE
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    dispatch({ type: 'DELETE_TASK', payload: task.id });
-    setDeleteDialogOpen(false);
+  const confirmDelete = async () => {
+    try {
+      console.log('Deleting task:', task.id);
+      if (window.electron) {
+        const result = await window.electron.storage.deleteTask(task.id);
+        console.log('Delete result:', result);
+      }
+      dispatch({ type: 'DELETE_TASK', payload: task.id });
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('删除失败,请重试');
+    }
   };
 
-  const handleArchive = () => {
-    dispatch({ type: 'ARCHIVE_TASK', payload: task.id });
-    setMenuAnchorEl(null);
+  const handleArchive = async () => {
+    try {
+      if (window.electron) {
+        await window.electron.storage.archiveTask(task.id);
+      }
+      dispatch({ type: 'ARCHIVE_TASK', payload: task.id });
+      setMenuAnchorEl(null);
+    } catch (error) {
+      console.error('Failed to archive task:', error);
+      alert('归档失败,请重试');
+    }
   };
 
   const handleSelect = () => {
