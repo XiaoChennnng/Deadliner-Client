@@ -38,10 +38,10 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Open DevTools in development
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
+  // Open DevTools in development (commented out for cleaner startup)
+  // if (isDev) {
+  //   mainWindow.webContents.openDevTools();
+  // }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
