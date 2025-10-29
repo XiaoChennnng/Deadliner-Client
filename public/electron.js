@@ -1,51 +1,55 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
+const { pathToFileURL } = require('url');
+const fs = require('fs');
 const StorageService = require('./storage');
 
-let mainWindow;
 let storageService;
+const isDev = !app.isPackaged;
+console.log('[boot] isPackaged=', app.isPackaged);
+
+let mainWindow;
 
 function createWindow() {
-  // Remove the application menu
   Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
+    width: 1400, height: 900, minWidth: 800, minHeight: 600,
+    backgroundColor: '#FEF7FF', show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
     },
-    titleBarStyle: 'default',
-    backgroundColor: '#FEF7FF',
-    show: false,
   });
 
-  // Load the app
-  const startUrl = isDev
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, '../build/index.html')}`;
+  const indexPath = path.join(__dirname, '..', 'build', 'index.html');
+  const indexURL  = pathToFileURL(indexPath).toString();
+  console.log('[exists index.html]', indexPath, fs.existsSync(indexPath));
 
-  mainWindow.loadURL(startUrl);
+  if (isDev) {
+    console.log('[loadURL] dev http://localhost:3000');
+    mainWindow.loadURL('http://localhost:3000');
+  } else {
+    console.log('[loadURL] prod', indexURL);
+    mainWindow.loadURL(indexURL);
+  }
 
-  // Show window when ready
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  // —— 兜底：如果（哪怕在 isDev=true 时）dev 服务器连不上，就回落到本地文件 —— //
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.error('[did-fail-load]', code, desc, url);
+    if (isDev && (code === -102 /*ERR_CONNECTION_REFUSED*/ || code === -105 /*ERR_NAME_NOT_RESOLVED*/)) {
+      console.log('[fallback] dev server down → load file index.html');
+      mainWindow.loadURL(indexURL);
+    }
   });
 
-  // Open DevTools in development (commented out for cleaner startup)
-  // if (isDev) {
-  //   mainWindow.webContents.openDevTools();
-  // }
+  mainWindow.webContents.on('did-finish-load', () =>
+    console.log('[did-finish-load]', mainWindow.webContents.getURL())
+  );
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.once('ready-to-show', () => mainWindow.show());
 }
 
 // This method will be called when Electron has finished initialization
@@ -224,22 +228,11 @@ ipcMain.handle('get-app-version', () => {
 
 // Security: Prevent navigation to external URLs
 app.on('web-contents-created', (event, contents) => {
-  contents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl);
-
-    // Allow navigation only to localhost in development
-    if (isDev && parsedUrl.origin === 'http://localhost:3000') {
-      return;
-    }
-
-    // Prevent all other navigation
-    if (parsedUrl.origin !== `file://`) {
-      event.preventDefault();
-    }
+  contents.on('will-navigate', (event, url) => {
+    const u = new URL(url);
+    if (isDev && u.origin === 'http://localhost:3000') return;
+    if (u.protocol === 'file:' || u.protocol === 'about:') return;
+    if (u.protocol === 'http:' || u.protocol === 'https:') event.preventDefault();
   });
-
-  // Prevent new window creation
-  contents.setWindowOpenHandler(({ url }) => {
-    return { action: 'deny' };
-  });
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 });
