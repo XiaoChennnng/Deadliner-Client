@@ -16,6 +16,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900, minWidth: 800, minHeight: 600,
     backgroundColor: '#FEF7FF', show: false,
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -219,6 +220,23 @@ ipcMain.handle('storage:importData', async (event, data) => {
 
 ipcMain.handle('storage:getStorageInfo', async () => {
   return storageService.getStorageInfo();
+});
+
+// WebDAV Sync
+ipcMain.handle('storage:webdavTestConnection', async () => {
+  return await storageService.webdavTestConnection();
+});
+
+ipcMain.handle('storage:webdavUploadBackup', async () => {
+  return await storageService.webdavUploadBackup();
+});
+
+ipcMain.handle('storage:webdavDownloadBackup', async () => {
+  return await storageService.webdavDownloadBackup();
+});
+
+ipcMain.handle('storage:webdavDownloadSnapshot', async () => {
+  return await storageService.webdavDownloadSnapshot();
 });
 
 // App version

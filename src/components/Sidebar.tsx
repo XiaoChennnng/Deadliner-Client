@@ -97,13 +97,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Avatar
           sx={{
-            width: 40,
-            height: 40,
-            bgcolor: theme.palette.primary.main,
+            width: 64,
+            height: 64,
+            bgcolor: 'transparent',
           }}
-        >
-          📅
-        </Avatar>
+          src="/icon.png"
+          alt="Deadliner Icon"
+        />
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Deadliner
         </Typography>

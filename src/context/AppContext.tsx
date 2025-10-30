@@ -38,7 +38,7 @@ export type AppAction =
   | { type: 'CLEAR_SELECTED_TASKS' }
   | { type: 'LOAD_TASKS'; payload: Task[] }
   | { type: 'LOAD_CATEGORIES'; payload: Category[] }
-  | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> }
+  | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<Task, 'id' | 'createdAt' | 'updatedAt'>> }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'TOGGLE_TASK_COMPLETION'; payload: string }

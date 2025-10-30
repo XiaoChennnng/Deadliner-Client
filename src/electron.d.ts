@@ -63,6 +63,12 @@ export interface StorageAPI {
   exportData: () => Promise<ExportData>;
   importData: (data: ExportData) => Promise<{ success: boolean }>;
   getStorageInfo: () => Promise<StorageInfo>;
+
+  // WebDAV Sync
+  webdavTestConnection: () => Promise<{ success: boolean; error?: string }>;
+  webdavUploadBackup: () => Promise<{ success: boolean; remotePath?: string; error?: string }>;
+  webdavDownloadBackup: () => Promise<{ success: boolean; error?: string }>;
+  webdavDownloadSnapshot: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface UISettings {

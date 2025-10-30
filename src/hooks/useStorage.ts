@@ -3,10 +3,11 @@ import { Task, Category } from '../types';
 import { UISettings, NotificationSettings, FeatureSettings, AISettings, UserPreferences } from '../electron';
 
 /**
- * 检查是否在Electron环境中运行
+ * 检查是否在Electron环境中运行（严格返回布尔）
  */
-const isElectron = () => {
-  return typeof window !== 'undefined' && window.electron && window.electron.storage;
+const isElectronEnv = (): boolean => {
+  // 强制布尔化，避免返回对象导致类型不匹配
+  return !!(typeof window !== 'undefined' && (window as any).electron && (window as any).electron.storage);
 };
 
 /**
@@ -18,13 +19,13 @@ export const useElectronStorage = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setIsReady(isElectron());
+    setIsReady(isElectronEnv());
   }, []);
 
   return {
     isReady,
-    isElectron: isElectron(),
-    storage: isElectron() ? window.electron.storage : null,
+    isElectron: isElectronEnv(),
+    storage: isElectronEnv() ? window.electron.storage : null,
   };
 };
 
@@ -180,7 +181,7 @@ export const useCategories = () => {
  * useSettings - 设置管理Hook
  */
 export function useSettings<T = any>(
-  settingsType: 'ui' | 'notification' | 'feature' | 'ai' | 'preferences'
+  settingsType: 'ui' | 'notification' | 'feature' | 'ai' | 'preferences' | 'sync'
 ) {
   const [settings, setSettings] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,6 +205,9 @@ export function useSettings<T = any>(
           break;
         case 'ai':
           data = await storage.getAISettings();
+          break;
+        case 'sync':
+          data = await storage.getSyncSettings();
           break;
         case 'preferences':
           data = await storage.getUserPreferences();
@@ -237,6 +241,9 @@ export function useSettings<T = any>(
           break;
         case 'ai':
           await storage.setAISettings(updates as Partial<AISettings>);
+          break;
+        case 'sync':
+          await storage.setSyncSettings(updates as any);
           break;
         case 'preferences':
           await storage.setUserPreferences(updates as Partial<UserPreferences>);

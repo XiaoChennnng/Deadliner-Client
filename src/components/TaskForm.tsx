@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,19 +11,15 @@ import {
   RadioGroup,
   Radio,
   FormControlLabel,
-  Select,
-  MenuItem,
   Stack,
   IconButton,
-  ToggleButtonGroup,
-  ToggleButton,
   Checkbox,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { zhCN } from 'date-fns/locale';
-import { X, Star, Target, TrendingUp, Save } from 'lucide-react';
+import { X, Star, Save } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Task } from '../types';
 import { triggerConfetti } from '../utils/confetti';
@@ -36,7 +32,7 @@ interface TaskFormProps {
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask, defaultType = 'task' }) => {
-  const { state, dispatch } = useApp();
+  const { dispatch } = useApp();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -45,6 +41,17 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
     deadline: null as Date | null,
     isStarred: false,
   });
+
+  const resetForm = useCallback(() => {
+    setFormData({
+      title: '',
+      description: '',
+      type: defaultType,
+      priority: 'medium',
+      deadline: null,
+      isStarred: false,
+    });
+  }, [defaultType]);
 
   useEffect(() => {
     if (editingTask) {
@@ -59,7 +66,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
     } else {
       resetForm();
     }
-  }, [editingTask, isOpen, defaultType]);
+  }, [editingTask, isOpen, defaultType, resetForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,17 +140,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
       console.error('Failed to save task:', error);
       alert('保存失败,请重试');
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      type: defaultType,
-      priority: 'medium',
-      deadline: null,
-      isStarred: false,
-    });
   };
 
   const handleClose = () => {

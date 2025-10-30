@@ -58,6 +58,12 @@ contextBridge.exposeInMainWorld('electron', {
     exportData: () => ipcRenderer.invoke('storage:exportData'),
     importData: (data) => ipcRenderer.invoke('storage:importData', data),
     getStorageInfo: () => ipcRenderer.invoke('storage:getStorageInfo'),
+
+    // WebDAV Sync
+    webdavTestConnection: () => ipcRenderer.invoke('storage:webdavTestConnection'),
+    webdavUploadBackup: () => ipcRenderer.invoke('storage:webdavUploadBackup'),
+    webdavDownloadBackup: () => ipcRenderer.invoke('storage:webdavDownloadBackup'),
+    webdavDownloadSnapshot: () => ipcRenderer.invoke('storage:webdavDownloadSnapshot'),
   },
 });
 

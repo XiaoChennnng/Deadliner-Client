@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  LinearProgress,
   Chip,
   IconButton,
   Button,
@@ -36,8 +35,6 @@ import {
   CheckCircle,
   Archive,
   Trash2,
-  TrendingUp,
-  Calendar,
   Flame,
   Search,
   Grid3x3 as GridIcon,
@@ -417,14 +414,6 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               创建您的第一个习惯，开始坚持每一天
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddRoundedIcon />}
-              onClick={onAddHabit}
-              size="large"
-            >
-              创建习惯
-            </Button>
           </Box>
         ) : (
           <Grid container spacing={viewMode === 'grid' ? 3 : 2}>
@@ -561,7 +550,7 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
 
       {/* FAB for Add Habit */}
       <Fab
-        color="secondary"
+        color="primary"
         onClick={onAddHabit}
         sx={{
           position: 'fixed',

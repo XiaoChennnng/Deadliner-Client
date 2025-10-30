@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Task } from '../types';
 import { useApp } from '../context/AppContext';
-import { formatDistanceToNow, differenceInDays, differenceInHours } from 'date-fns';
+import { formatDistanceToNow, differenceInDays, differenceInHours, startOfDay } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
 interface TaskItemProps {
@@ -139,14 +139,32 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onE
     const deadline = new Date(task.deadline);
     const created = new Date(task.createdAt);
 
-    const totalTime = deadline.getTime() - created.getTime();
-    const elapsedTime = now.getTime() - created.getTime();
-    const remainingTime = deadline.getTime() - now.getTime();
+    const deadlineValid = !isNaN(deadline.getTime());
+    const createdValid = !isNaN(created.getTime());
+    if (!deadlineValid) return null;
 
-    // 进度条表示已经过去的时间百分比（0% = 刚开始，100% = 时间耗尽）
-    const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalTime) * 100));
+    const remainingTime = deadline.getTime() - now.getTime();
     const daysRemaining = differenceInDays(deadline, now);
     const hoursRemaining = differenceInHours(deadline, now);
+
+    // 进度条表示已经过去的时间百分比（0% = 刚开始，100% = 时间耗尽）
+    // 为了可视性，设置一个最小可见进度阈值
+    const MIN_VISIBLE_PROGRESS = 2; // 2%
+    let progressPercentage = 0;
+
+    // 使用“今天零点”为锚点，表示现在到 DDL 的接近度
+    const anchor = startOfDay(now);
+    const totalTimeFromAnchor = deadline.getTime() - anchor.getTime();
+    if (totalTimeFromAnchor > 0) {
+      const elapsedFromAnchor = now.getTime() - anchor.getTime();
+      let pct = (elapsedFromAnchor / totalTimeFromAnchor) * 100;
+      pct = Math.max(0, Math.min(100, pct));
+      if (pct > 0 && pct < MIN_VISIBLE_PROGRESS) pct = MIN_VISIBLE_PROGRESS;
+      progressPercentage = pct;
+    } else {
+      // DDL 早于今天零点：视为已逾期或立即截止
+      progressPercentage = remainingTime <= 0 ? 100 : 0;
+    }
 
     let statusColor = theme.palette.success.main;
     let statusText = '';
