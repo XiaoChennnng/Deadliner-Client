@@ -35,12 +35,6 @@
    ```bash
    git clone https://github.com/XiaoChennnng/Deadliner-Client.git
    ```
-## 贡献
-欢迎任何形式的贡献！请提交 Issue 或 Pull Request，以改进功能或修复 Bug。
-
-## 许可证
-本项目基于 MIT 许可证，详情请参见 [LICENSE](LICENSE)。
-
 ## WebDAV 同步（可选）
 - 支持将应用数据（任务、习惯、分类、设置备份）上传到 WebDAV 并从远端恢复。
 - 不改变本地数据库逻辑；同步为手动操作，默认路径为 `/Deadliner/backup.json`。
@@ -64,3 +58,11 @@
 ### 常见问题
 - 提示“未选择 WebDAV 作为同步提供者”：请在设置中选择并保存为 WebDAV。
 - 连接失败：检查地址、用户名、密码是否正确，或服务端是否支持 WebDAV。
+
+## 贡献
+欢迎任何形式的贡献！请提交 Issue 或 Pull Request，以改进功能或修复 Bug。
+
+## 许可证
+本项目基于 MIT 许可证，详情请参见 [LICENSE](LICENSE)。
+
+
