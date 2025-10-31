@@ -11,7 +11,6 @@ import {
   Checkbox,
   Menu,
   MenuItem,
-  Stack,
   Tooltip,
   useTheme,
   Dialog,
@@ -27,12 +26,11 @@ import {
   CheckSquare,
   Archive,
   Trash2,
-  Target,
   Edit,
 } from 'lucide-react';
 import { Task } from '../types';
 import { useApp } from '../context/AppContext';
-import { formatDistanceToNow, differenceInDays, differenceInHours, startOfDay } from 'date-fns';
+import { formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes, startOfDay } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
 interface TaskItemProps {
@@ -41,14 +39,13 @@ interface TaskItemProps {
   onEdit?: (task: Task) => void;
 }
 
-export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onEdit }) => {
+export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
   const { state, dispatch } = useApp();
   const theme = useTheme();
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isSelected = state.selectedTasks.has(task.id);
-  const category = state.categories.find(cat => cat.id === task.category);
 
   const handleToggleComplete = async () => {
     try {
@@ -131,16 +128,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onE
     }
   };
 
-  // Calculate deadline progress and status
+  // 计算截止日期进度和状态
   const getDeadlineInfo = () => {
     if (!task.deadline) return null;
 
     const now = new Date();
     const deadline = new Date(task.deadline);
-    const created = new Date(task.createdAt);
 
     const deadlineValid = !isNaN(deadline.getTime());
-    const createdValid = !isNaN(created.getTime());
     if (!deadlineValid) return null;
 
     const remainingTime = deadline.getTime() - now.getTime();
@@ -174,7 +169,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, viewMode = 'grid', onE
       statusText = '已逾期';
     } else if (daysRemaining === 0) {
       statusColor = theme.palette.warning.main;
-      statusText = hoursRemaining <= 12 ? `${hoursRemaining}小时后截止` : '今天截止';
+      const minutesRemaining = Math.max(1, differenceInMinutes(deadline, now));
+      if (minutesRemaining < 60) {
+        statusText = `剩余${minutesRemaining}分钟`;
+      } else {
+        statusText = hoursRemaining <= 12 ? `${hoursRemaining}小时后截止` : '今天截止';
+      }
     } else if (daysRemaining === 1) {
       statusColor = theme.palette.warning.light;
       statusText = '明天截止';

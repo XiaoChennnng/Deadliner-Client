@@ -232,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           open={mobileOpen}
           onClose={onDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true, // 在移动端保持更好的打开性能
           }}
           sx={{
             '& .MuiDrawer-paper': {
@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {drawerContent}
         </Drawer>
       ) : (
-        // Desktop Permanent Drawer
+        // 桌面端固定抽屉
         <Drawer
           variant="permanent"
           sx={{

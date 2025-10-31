@@ -51,17 +51,17 @@ export const TaskList: React.FC<TaskListProps> = ({ onAddTask, onEditTask }) => 
   const [searchQuery, setSearchQuery] = useState('');
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
 
-  // Filter and sort tasks
+  // 过滤和排序任务
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = state.tasks.filter(task => {
-      // Filter by archive status
+      // 按归档状态过滤
       if (task.isArchived && state.currentView !== 'archive') return false;
       if (!task.isArchived && state.currentView === 'archive') return false;
 
-      // Only show tasks (not habits) in TaskList
+      // 只显示任务（不包括习惯）
       if (task.type !== 'task') return false;
 
-      // Filter by search query
+      // 按搜索关键词过滤
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -73,8 +73,11 @@ export const TaskList: React.FC<TaskListProps> = ({ onAddTask, onEditTask }) => 
       return true;
     });
 
-    // Sort tasks
+    // 排序任务：星标优先，然后按选定的排序键
     filtered.sort((a, b) => {
+      const starDiff = Number(b.isStarred) - Number(a.isStarred);
+      if (starDiff !== 0) return starDiff;
+
       switch (state.sortBy) {
         case 'deadline':
           if (!a.deadline && !b.deadline) return 0;

@@ -1,4 +1,4 @@
-// Types for the Deadliner application
+// Deadliner应用程序的类型定义
 export interface Task {
   id: string;
   title: string;
@@ -11,8 +11,8 @@ export interface Task {
   createdAt: Date;
   updatedAt: Date;
   tags: string[];
-  progress?: number; // For habits
-  streak?: number; // For habits
+  progress?: number; // 用于习惯
+  streak?: number; // 用于习惯
   isStarred: boolean;
   isArchived: boolean;
 }

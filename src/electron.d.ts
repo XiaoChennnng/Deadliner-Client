@@ -1,5 +1,5 @@
 /**
- * TypeScript definitions for Electron Storage API
+ * Electron存储API的TypeScript类型定义
  */
 
 import { Task, Category } from '../types';
@@ -11,7 +11,7 @@ export interface ElectronAPI {
 }
 
 export interface StorageAPI {
-  // Tasks
+  // 任务相关
   getTasks: () => Promise<Task[]>;
   getTask: (id: string) => Promise<Task | null>;
   createTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<{ success: boolean }>;
@@ -21,15 +21,15 @@ export interface StorageAPI {
   unarchiveTask: (id: string) => Promise<{ success: boolean }>;
   batchUpdateTasks: (ids: string[], updates: Partial<Task>) => Promise<{ success: boolean }>;
 
-  // Categories
+  // 分类相关
   getCategories: () => Promise<Category[]>;
   createCategory: (category: Omit<Category, 'id'>) => Promise<{ success: boolean }>;
 
-  // Habit checkins
+  // 习惯打卡
   createHabitCheckin: (checkin: any) => Promise<{ success: boolean }>;
   getHabitCheckins: (taskId: string, startDate: Date, endDate: Date) => Promise<any[]>;
 
-  // Stats
+  // 统计数据
   getStats: () => Promise<{
     totalTasks: number;
     completedTasks: number;
@@ -38,13 +38,13 @@ export interface StorageAPI {
     categories: number;
   }>;
 
-  // Settings
+  // 设置相关
   getSetting: (key: string, defaultValue?: any) => Promise<any>;
   setSetting: (key: string, value: any) => Promise<{ success: boolean }>;
   getSecureSetting: (key: string, defaultValue?: any) => Promise<any>;
   setSecureSetting: (key: string, value: any) => Promise<{ success: boolean }>;
 
-  // Specific settings
+  // 具体设置项
   getUISettings: () => Promise<UISettings>;
   setUISettings: (settings: Partial<UISettings>) => Promise<{ success: boolean }>;
   getNotificationSettings: () => Promise<NotificationSettings>;
@@ -59,12 +59,12 @@ export interface StorageAPI {
   setUserPreferences: (preferences: Partial<UserPreferences>) => Promise<{ success: boolean }>;
   getAppInfo: () => Promise<AppInfo>;
 
-  // Backup & Restore
+  // 备份与恢复
   exportData: () => Promise<ExportData>;
   importData: (data: ExportData) => Promise<{ success: boolean }>;
   getStorageInfo: () => Promise<StorageInfo>;
 
-  // WebDAV Sync
+  // WebDAV同步
   webdavTestConnection: () => Promise<{ success: boolean; error?: string }>;
   webdavUploadBackup: () => Promise<{ success: boolean; remotePath?: string; error?: string }>;
   webdavDownloadBackup: () => Promise<{ success: boolean; error?: string }>;

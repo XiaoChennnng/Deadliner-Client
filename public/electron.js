@@ -53,9 +53,9 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show());
 }
 
-// This method will be called when Electron has finished initialization
+// Electron初始化完成后调用此方法
 app.whenReady().then(() => {
-  // Initialize storage service
+  // 初始化存储服务
   storageService = new StorageService();
 
   createWindow();
@@ -64,23 +64,40 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
+    // macOS 激活时，如存储未初始化或异常，尝试重建
+    try {
+      const info = storageService && storageService.getStorageInfo && storageService.getStorageInfo();
+      if (!info || !info.database || !info.settings) {
+        storageService = new StorageService();
+      }
+    } catch (e) {
+      storageService = new StorageService();
+    }
   });
 });
 
-// Quit when all windows are closed
+// 所有窗口关闭时退出应用
 app.on('window-all-closed', () => {
-  // Close storage before quitting
-  if (storageService) {
-    storageService.close();
-  }
-
+  // macOS：关闭所有窗口时不退出应用，也不关闭存储
   if (process.platform !== 'darwin') {
+    if (storageService) {
+      storageService.close();
+    }
     app.quit();
   }
 });
 
-// Handle IPC events for storage operations
-// Tasks
+// 在真正退出前关闭存储，适用于所有平台
+app.on('before-quit', () => {
+  try {
+    if (storageService) storageService.close();
+  } catch (e) {
+    console.error('[before-quit] close storage error', e);
+  }
+});
+
+// 处理存储操作的IPC事件
+// 任务相关
 ipcMain.handle('storage:getTasks', async () => {
   return await storageService.getTasks();
 });
@@ -117,7 +134,7 @@ ipcMain.handle('storage:batchUpdateTasks', async (event, ids, updates) => {
   return await storageService.batchUpdateTasks(ids, updates);
 });
 
-// Categories
+// 分类相关
 ipcMain.handle('storage:getCategories', async () => {
   return await storageService.getCategories();
 });
@@ -126,7 +143,7 @@ ipcMain.handle('storage:createCategory', async (event, category) => {
   return await storageService.createCategory(category);
 });
 
-// Habit checkins
+// 习惯打卡相关
 ipcMain.handle('storage:createHabitCheckin', async (event, checkin) => {
   return await storageService.createHabitCheckin(checkin);
 });
@@ -135,12 +152,12 @@ ipcMain.handle('storage:getHabitCheckins', async (event, taskId, startDate, endD
   return await storageService.getHabitCheckins(taskId, startDate, endDate);
 });
 
-// Stats
+// 统计相关
 ipcMain.handle('storage:getStats', async () => {
   return await storageService.getStats();
 });
 
-// Settings
+// 设置相关
 ipcMain.handle('storage:getSetting', async (event, key, defaultValue) => {
   return await storageService.getSetting(key, defaultValue);
 });
@@ -209,7 +226,7 @@ ipcMain.handle('storage:getAppInfo', async () => {
   return await storageService.getAppInfo();
 });
 
-// Backup & Restore
+// 备份与恢复
 ipcMain.handle('storage:exportData', async () => {
   return await storageService.exportData();
 });
@@ -222,7 +239,7 @@ ipcMain.handle('storage:getStorageInfo', async () => {
   return storageService.getStorageInfo();
 });
 
-// WebDAV Sync
+// WebDAV同步
 ipcMain.handle('storage:webdavTestConnection', async () => {
   return await storageService.webdavTestConnection();
 });
@@ -239,12 +256,12 @@ ipcMain.handle('storage:webdavDownloadSnapshot', async () => {
   return await storageService.webdavDownloadSnapshot();
 });
 
-// App version
+// 应用版本
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
-// Security: Prevent navigation to external URLs
+// 安全：防止导航到外部URL
 app.on('web-contents-created', (event, contents) => {
   contents.on('will-navigate', (event, url) => {
     const u = new URL(url);

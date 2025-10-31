@@ -16,7 +16,7 @@ class DatabaseHelper {
     const dbPath = path.join(userDataPath, 'deadliner.db');
 
     this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better performance
+    this.db.pragma('journal_mode = WAL'); // 预写日志模式，提升性能
 
     this.initDatabase();
     DatabaseHelper.instance = this;

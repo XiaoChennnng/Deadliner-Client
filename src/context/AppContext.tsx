@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { AppState, Task, Category } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initial state
+// 初始状态
 const initialState: AppState = {
   user: null,
   tasks: [],
@@ -19,10 +19,10 @@ const initialState: AppState = {
   error: null,
 };
 
-// Check if we're in Electron environment
+// 检查是否在Electron环境中
 const isElectron = typeof window !== 'undefined' && window.electron;
 
-// Action types
+// 动作类型
 export type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -52,7 +52,7 @@ export type AppAction =
   | { type: 'UPDATE_CATEGORY'; payload: { id: string; updates: Partial<Category> } }
   | { type: 'DELETE_CATEGORY'; payload: string };
 
-// Reducer function
+// 状态管理器函数
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_LOADING':
@@ -89,7 +89,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         isMultiSelectMode: !state.isMultiSelectMode,
-        selectedTasks: new Set(), // Clear selections when toggling
+        selectedTasks: new Set(), // 切换时清除选择
       };
 
     case 'SELECT_TASK':

@@ -63,7 +63,7 @@ interface GuidedPrompt {
 
 interface MissingInfo {
   missingFields: string[]; // 缺失的字段：time, goal, detail, priority, type 等
-  reason: string; // AI 给出的缺失原因
+  reason: string; // AI给出的缺失原因
 }
 
 export const AIGenerationPage: React.FC = () => {
@@ -88,7 +88,7 @@ export const AIGenerationPage: React.FC = () => {
     type: '' as '' | 'task' | 'habit', // 添加类型字段
   });
 
-  // API Settings
+  // API设置
   const [apiKey, setApiKey] = useState(localStorage.getItem('deepseek_api_key') || '');
   const [baseUrl, setBaseUrl] = useState(
     localStorage.getItem('deepseek_base_url') || 'https://api.deepseek.com'
@@ -290,7 +290,7 @@ missingFields 可能的值：
           cleanContent = cleanContent.replace(/```\s*/, '').replace(/```\s*$/, '');
         }
 
-        // Extract JSON from response
+        // 从响应中提取JSON
         const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           task = JSON.parse(jsonMatch[0]);
@@ -401,7 +401,7 @@ missingFields 可能的值：
       triggerConfetti();
     }, 100);
 
-    // Remove from generated list
+    // 从生成列表中移除
     setGeneratedTasks(tasks => tasks.filter(t => t !== task));
   };
 
@@ -429,10 +429,10 @@ missingFields 可能的值：
       triggerConfetti();
     }, 100);
 
-    // Remove from generated list
+    // 从生成列表中移除
     setGeneratedTasks(tasks => tasks.filter(t => t !== taskToAdd));
 
-    // Close dialog and reset
+    // 关闭对话框并重置
     setTypeSelectDialogOpen(false);
     setTaskToAdd(null);
   };

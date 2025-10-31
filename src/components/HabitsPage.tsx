@@ -78,8 +78,11 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
       );
     }
 
-    // 排序
+    // 排序：星标优先置顶，然后按选择的排序规则
     filtered.sort((a, b) => {
+      const starDiff = Number(b.isStarred) - Number(a.isStarred);
+      if (starDiff !== 0) return starDiff;
+
       switch (sortBy) {
         case 'created':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
