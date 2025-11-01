@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             height: 64,
             bgcolor: 'transparent',
           }}
-          src="/icon.png"
+          src="./icon.png"
           alt="Deadliner Icon"
         />
         <Typography variant="h6" sx={{ fontWeight: 700 }}>

@@ -17,13 +17,13 @@ function createWindow() {
   let iconPath;
   switch (process.platform) {
     case 'win32':
-      iconPath = path.join(__dirname, 'icon.ico');
+      iconPath = path.join(app.getAppPath(), '..', 'icon.ico');
       break;
     case 'darwin':
-      iconPath = path.join(__dirname, 'icon.icns');
+      iconPath = path.join(app.getAppPath(), '..', 'icon.icns');
       break;
     default:
-      iconPath = path.join(__dirname, 'icon.png');
+      iconPath = path.join(app.getAppPath(), '..', 'icon.png');
   }
 
   mainWindow = new BrowserWindow({

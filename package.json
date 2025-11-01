@@ -102,6 +102,20 @@
       "public/settings.js",
       "public/webdav.js"
     ],
+    "extraResources": [
+      {
+        "from": "public/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "public/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "public/icon.icns",
+        "to": "icon.icns"
+      }
+    ],
     "asarUnpack": [
       "**/*.node"
     ],
