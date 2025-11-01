@@ -6,7 +6,6 @@
 
 const STORAGE_KEY = 'deadliner_encouragements';
 const INDEX_KEY = 'deadliner_encouragement_index';
-const BATCH_SIZE = 50;
 
 interface EncouragementData {
   messages: string[];

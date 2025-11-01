@@ -1,26 +1,43 @@
 {
   "compilerOptions": {
+    // 指定编译目标为 ES2015
     "target": "es2015",
+    // 指定包含的库文件：DOM、DOM 迭代器、ESNext
     "lib": [
       "dom",
       "dom.iterable",
       "esnext"
     ],
+    // 允许编译 JavaScript 文件
     "allowJs": true,
+    // 跳过库文件的类型检查以提高编译速度
     "skipLibCheck": true,
+    // 启用 ES 模块互操作性
     "esModuleInterop": true,
+    // 允许合成默认导入
     "allowSyntheticDefaultImports": true,
+    // 启用严格类型检查
     "strict": true,
+    // 强制文件名大小写一致
     "forceConsistentCasingInFileNames": true,
+    // 防止 switch 语句中的 case 穿透
     "noFallthroughCasesInSwitch": true,
+    // 指定模块系统为 ESNext
     "module": "esnext",
+    // 使用 Node.js 模块解析策略
     "moduleResolution": "node",
+    // 允许导入 JSON 模块
     "resolveJsonModule": true,
+    // 将每个文件作为单独的模块处理
     "isolatedModules": true,
+    // 不生成输出文件（用于类型检查）
     "noEmit": true,
+    // 使用 React JSX 转换
     "jsx": "react-jsx",
+    // 启用向下兼容的迭代器支持
     "downlevelIteration": true
   },
+  // 指定包含的源文件目录
   "include": [
     "src"
   ]

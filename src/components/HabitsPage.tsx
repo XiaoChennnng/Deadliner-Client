@@ -48,21 +48,33 @@ import { Task } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
+// 习惯页面属性接口
 interface HabitsPageProps {
-  onAddHabit: () => void;
-  onEditHabit: (habit: Task) => void;
+  onAddHabit: () => void; // 添加习惯回调
+  onEditHabit: (habit: Task) => void; // 编辑习惯回调
 }
 
+// 习惯页面组件
 export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit }) => {
+  // 获取应用状态和 dispatch 函数
   const { state, dispatch } = useApp();
+  // 菜单锚点
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  // 选中的习惯
   const [selectedHabit, setSelectedHabit] = useState<Task | null>(null);
+  // 搜索查询
   const [searchQuery, setSearchQuery] = useState('');
+  // 视图模式
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // 排序菜单锚点
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  // 排序方式
   const [sortBy, setSortBy] = useState<'created' | 'updated' | 'priority'>('created');
+  // 删除对话框开关
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // 要删除的习惯
   const [habitToDelete, setHabitToDelete] = useState<Task | null>(null);
+  // 批量删除对话框开关
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
 
   // 获取所有未归档的习惯并过滤搜索
@@ -85,12 +97,12 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
 
       switch (sortBy) {
         case 'created':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // 创建时间降序
         case 'updated':
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(); // 更新时间降序
         case 'priority':
           const priorityOrder = { high: 3, medium: 2, low: 1 };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
+          return priorityOrder[b.priority] - priorityOrder[a.priority]; // 优先级降序
         default:
           return 0;
       }
@@ -101,35 +113,40 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
 
   // 统计数据
   const stats = useMemo(() => {
-    const total = habits.length;
-    const completed = habits.filter(h => h.completed).length;
-    const active = habits.filter(h => !h.completed).length;
+    const total = habits.length; // 总习惯数
+    const completed = habits.filter(h => h.completed).length; // 已完成数
+    const active = habits.filter(h => !h.completed).length; // 活跃数
     const avgProgress = habits.length > 0
       ? Math.round(habits.reduce((sum, h) => sum + (h.progress || 0), 0) / habits.length)
-      : 0;
-    const totalStreak = habits.reduce((sum, h) => sum + (h.streak || 0), 0);
+      : 0; // 平均进度
+    const totalStreak = habits.reduce((sum, h) => sum + (h.streak || 0), 0); // 总连续天数
 
     return { total, completed, active, avgProgress, totalStreak };
   }, [habits]);
 
+  // 打开菜单
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, habit: Task) => {
     setMenuAnchorEl(event.currentTarget);
     setSelectedHabit(habit);
   };
 
+  // 关闭菜单
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setSelectedHabit(null);
   };
 
+  // 切换完成状态
   const handleToggleComplete = (habitId: string) => {
     dispatch({ type: 'TOGGLE_TASK_COMPLETION', payload: habitId });
   };
 
+  // 切换星标状态
   const handleToggleStar = (habitId: string) => {
     dispatch({ type: 'TOGGLE_TASK_STAR', payload: habitId });
   };
 
+  // 归档习惯
   const handleArchive = () => {
     if (selectedHabit) {
       dispatch({ type: 'ARCHIVE_TASK', payload: selectedHabit.id });
@@ -137,6 +154,7 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
     handleMenuClose();
   };
 
+  // 处理删除
   const handleDelete = () => {
     if (selectedHabit) {
       setHabitToDelete(selectedHabit);
@@ -145,13 +163,14 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
     handleMenuClose();
   };
 
+  // 确认删除习惯
   const confirmDelete = async () => {
     if (habitToDelete) {
       try {
         if (window.electron) {
-          await window.electron.storage.deleteTask(habitToDelete.id);
+          await window.electron.storage.deleteTask(habitToDelete.id); // 从数据库删除
         }
-        dispatch({ type: 'DELETE_TASK', payload: habitToDelete.id });
+        dispatch({ type: 'DELETE_TASK', payload: habitToDelete.id }); // 更新状态
         setDeleteDialogOpen(false);
         setHabitToDelete(null);
         setSelectedHabit(null);
@@ -162,16 +181,19 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
     }
   };
 
+  // 处理批量删除
   const handleBatchDelete = () => {
     setBatchDeleteDialogOpen(true);
   };
 
+  // 确认批量删除
   const confirmBatchDelete = () => {
     const selectedTaskIds = Array.from(state.selectedTasks);
     dispatch({ type: 'BATCH_DELETE_TASKS', payload: selectedTaskIds });
     setBatchDeleteDialogOpen(false);
   };
 
+  // 处理编辑
   const handleEdit = () => {
     if (selectedHabit) {
       onEditHabit(selectedHabit);
@@ -179,39 +201,45 @@ export const HabitsPage: React.FC<HabitsPageProps> = ({ onAddHabit, onEditHabit 
     handleMenuClose();
   };
 
+  // 处理排序变化
   const handleSortChange = (newSortBy: typeof sortBy) => {
     setSortBy(newSortBy);
     setSortAnchorEl(null);
   };
 
+  // 切换多选模式
   const toggleMultiSelect = () => {
     dispatch({ type: 'TOGGLE_MULTI_SELECT' });
   };
 
+  // 处理选择习惯
   const handleSelect = (habitId: string) => {
     if (state.selectedTasks.has(habitId)) {
-      dispatch({ type: 'DESELECT_TASK', payload: habitId });
+      dispatch({ type: 'DESELECT_TASK', payload: habitId }); // 取消选择
     } else {
-      dispatch({ type: 'SELECT_TASK', payload: habitId });
+      dispatch({ type: 'SELECT_TASK', payload: habitId }); // 选择
     }
   };
 
+  // 批量完成
   const handleBatchComplete = () => {
     const selectedTaskIds = Array.from(state.selectedTasks);
     dispatch({ type: 'BATCH_COMPLETE_TASKS', payload: selectedTaskIds });
   };
 
+  // 批量归档
   const handleBatchArchive = () => {
     const selectedTaskIds = Array.from(state.selectedTasks);
     dispatch({ type: 'BATCH_ARCHIVE_TASKS', payload: selectedTaskIds });
   };
 
+  // 获取优先级颜色
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+      case 'high': return 'error'; // 高优先级
+      case 'medium': return 'warning'; // 中优先级
+      case 'low': return 'success'; // 低优先级
+      default: return 'default'; // 默认
     }
   };
 

@@ -15,9 +15,10 @@ import {
   LinearProgress,
   ToggleButtonGroup,
   ToggleButton,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
-  Archive as ArchiveIcon,
   ArchiveRestore as Unarchive,
   Trash2,
   Star,
@@ -26,17 +27,35 @@ import {
   MoreVertical,
   Grid3x3 as GridIcon,
   List as ListIcon,
+  Undo,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Task } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { ConfirmDialog } from './ConfirmDialog';
+import { undoManager } from '../utils/undoManager';
 
+// 存档页面组件
 export const ArchivePage: React.FC = () => {
+  // 获取应用状态和 dispatch 函数
   const { state, dispatch } = useApp();
+  // 视图模式：网格或列表
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // 菜单锚点元素
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  // 选中的任务
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  // 删除对话框开关
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // 要删除的任务
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  // 撤销提示开关
+  const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
+  // 最后删除的任务
+  const [lastDeletedTask, setLastDeletedTask] = useState<Task | null>(null);
+  // 撤销操作 ID
+  const [undoActionId, setUndoActionId] = useState<string | null>(null);
 
   // 获取所有已归档的任务
   const archivedTasks = useMemo(() => {
@@ -45,24 +64,27 @@ export const ArchivePage: React.FC = () => {
 
   // 统计数据
   const stats = useMemo(() => {
-    const total = archivedTasks.length;
-    const tasks = archivedTasks.filter(t => t.type === 'task').length;
-    const habits = archivedTasks.filter(t => t.type === 'habit').length;
-    const completed = archivedTasks.filter(t => t.completed).length;
+    const total = archivedTasks.length; // 总项目数
+    const tasks = archivedTasks.filter(t => t.type === 'task').length; // 任务数
+    const habits = archivedTasks.filter(t => t.type === 'habit').length; // 习惯数
+    const completed = archivedTasks.filter(t => t.completed).length; // 已完成数
 
     return { total, tasks, habits, completed };
   }, [archivedTasks]);
 
+  // 打开菜单
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, task: Task) => {
     setMenuAnchorEl(event.currentTarget);
     setSelectedTask(task);
   };
 
+  // 关闭菜单
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setSelectedTask(null);
   };
 
+  // 取消归档任务
   const handleUnarchive = () => {
     if (selectedTask) {
       dispatch({ type: 'UNARCHIVE_TASK', payload: selectedTask.id });
@@ -70,19 +92,90 @@ export const ArchivePage: React.FC = () => {
     handleMenuClose();
   };
 
+  // 处理删除
   const handleDelete = () => {
-    if (selectedTask && window.confirm('确定要永久删除这个项目吗？此操作无法撤销。')) {
-      dispatch({ type: 'DELETE_TASK', payload: selectedTask.id });
+    if (selectedTask) {
+      setTaskToDelete(selectedTask);
+      setDeleteDialogOpen(true);
     }
-    handleMenuClose();
+    handleMenuClose(); // 现在可以安全地关闭菜单
   };
 
+  // 确认删除任务
+  const confirmDelete = async () => {
+    if (taskToDelete) {
+      try {
+        // 先调用数据库删除
+        await window.electron.storage.deleteTask(taskToDelete.id);
+
+        // 保存任务数据用于撤销
+        setLastDeletedTask(taskToDelete);
+        const actionId = undoManager.addAction({
+          type: 'delete_task',
+          data: taskToDelete,
+          description: `删除任务 "${taskToDelete.title}"`,
+        });
+        setUndoActionId(actionId);
+
+        // 更新前端状态
+        dispatch({ type: 'DELETE_TASK', payload: taskToDelete.id });
+
+        // 显示撤销提示
+        setUndoSnackbarOpen(true);
+        setDeleteDialogOpen(false);
+        setTaskToDelete(null); // 清理 taskToDelete
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        // 可以在这里显示错误提示给用户
+      }
+    }
+  };
+
+  // 处理撤销操作
+  const handleUndo = async () => {
+    if (undoActionId && lastDeletedTask) {
+      try {
+        const action = undoManager.undo(undoActionId);
+        if (action) {
+          console.log('Undoing delete for task:', lastDeletedTask.id, lastDeletedTask.title);
+
+          // 恢复前端状态 - 确保任务有正确的 isArchived 状态
+          const taskToRestore = {
+            ...lastDeletedTask,
+            isArchived: true, // 确保任务在存档中心显示
+          };
+
+          console.log('Dispatching ADD_TASK with task:', taskToRestore);
+          dispatch({
+            type: 'ADD_TASK',
+            payload: taskToRestore,
+          });
+
+          // 然后尝试将任务添加到数据库
+          try {
+            const result = await window.electron.storage.createTask(taskToRestore);
+            console.log('Database create result:', result);
+          } catch (dbError) {
+            console.error('Database create failed, but frontend state updated:', dbError);
+            // 前端状态已经更新，即使数据库操作失败
+          }
+        }
+      } catch (error) {
+        console.error('Failed to restore task:', error);
+      }
+    }
+    setUndoSnackbarOpen(false);
+    setLastDeletedTask(null);
+    setUndoActionId(null);
+  };
+
+  // 获取优先级颜色
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+      case 'high': return 'error'; // 高优先级
+      case 'medium': return 'warning'; // 中优先级
+      case 'low': return 'success'; // 低优先级
+      default: return 'default'; // 默认
     }
   };
 
@@ -391,6 +484,47 @@ export const ArchivePage: React.FC = () => {
           永久删除
         </MenuItem>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setTaskToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="确认删除"
+        description={`确定要永久删除任务"${taskToDelete?.title}"吗？此操作无法撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmColor="error"
+        severity="error"
+      />
+
+      {/* Undo Snackbar */}
+      <Snackbar
+        open={undoSnackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setUndoSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<Undo size={16} />}
+              onClick={handleUndo}
+            >
+              撤销
+            </Button>
+          }
+          sx={{ minWidth: 300 }}
+        >
+          任务已删除
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

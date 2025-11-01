@@ -13,10 +13,23 @@ let mainWindow;
 function createWindow() {
   Menu.setApplicationMenu(null);
 
+  // 根据平台选择正确的图标
+  let iconPath;
+  switch (process.platform) {
+    case 'win32':
+      iconPath = path.join(__dirname, 'icon.ico');
+      break;
+    case 'darwin':
+      iconPath = path.join(__dirname, 'icon.icns');
+      break;
+    default:
+      iconPath = path.join(__dirname, 'icon.png');
+  }
+
   mainWindow = new BrowserWindow({
     width: 1400, height: 900, minWidth: 800, minHeight: 600,
     backgroundColor: '#FEF7FF', show: false,
-    icon: path.join(__dirname, 'icon.png'),
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

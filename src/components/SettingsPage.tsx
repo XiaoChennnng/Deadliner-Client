@@ -22,31 +22,44 @@ import { useSettings } from '../hooks/useStorage';
 import { useApp } from '../context/AppContext';
 import { SyncSettings } from '../electron';
 
+// 主题颜色键类型
 type ThemeColorKey = keyof typeof themePalettes;
 
+// 设置页面属性接口
 interface SettingsPageProps {
-  darkMode: boolean;
-  onThemeToggle: () => void;
-  themeColor: ThemeColorKey;
-  onThemeColorChange: (color: ThemeColorKey) => void;
+  darkMode: boolean; // 深色模式
+  onThemeToggle: () => void; // 主题切换回调
+  themeColor: ThemeColorKey; // 主题颜色
+  onThemeColorChange: (color: ThemeColorKey) => void; // 主题颜色变化回调
 }
 
+// 设置页面组件
 export const SettingsPage: React.FC<SettingsPageProps> = ({
-  darkMode,
-  onThemeToggle,
-  themeColor,
-  onThemeColorChange,
+  darkMode, // 深色模式状态
+  onThemeToggle, // 主题切换
+  themeColor, // 当前主题颜色
+  onThemeColorChange, // 主题颜色变化
 }) => {
-  
+
+  // 同步设置钩子
   const { settings: syncSettings, updateSettings: updateSyncSettings, reload: reloadSync } = useSettings<SyncSettings>('sync');
+  // 应用上下文
   const { dispatch } = useApp();
+  // WebDAV URL
   const [webdavUrl, setWebdavUrl] = useState('');
+  // WebDAV 用户名
   const [webdavUsername, setWebdavUsername] = useState('');
+  // WebDAV 密码
   const [webdavPassword, setWebdavPassword] = useState('');
+  // 同步启用状态
   const [syncEnabled, setSyncEnabled] = useState(false);
+  // 自动同步
   const [autoSync, setAutoSync] = useState(false);
+  // 测试状态
   const [testing, setTesting] = useState(false);
+  // 测试结果
   const [testResult, setTestResult] = useState<string | null>(null);
+  // 操作消息
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +73,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   }, [syncSettings]);
 
+  // 保存 WebDAV 设置
   const saveWebdavSettings = async () => {
     await updateSyncSettings({
       provider: 'webdav',
@@ -75,7 +89,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     setActionMsg('已保存 WebDAV 设置');
   };
 
-    const testConnection = async () => {
+  // 测试连接
+  const testConnection = async () => {
     try {
       setTesting(true);
       setTestResult(null);
@@ -92,7 +107,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-    const uploadBackup = async () => {
+  // 上传备份
+  const uploadBackup = async () => {
     const res = await window.electron.storage.webdavUploadBackup();
     if (res.success) {
       setActionMsg('上传成功');
@@ -101,16 +117,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-    const downloadBackup = async () => {
+  // 下载备份
+  const downloadBackup = async () => {
     const res = await window.electron.storage.webdavDownloadBackup();
     if (res.success) {
       try {
         const [tasks, categories] = await Promise.all([
-          window.electron.storage.getTasks(),
-          window.electron.storage.getCategories(),
+          window.electron.storage.getTasks(), // 获取任务
+          window.electron.storage.getCategories(), // 获取分类
         ]);
-        dispatch({ type: 'LOAD_TASKS', payload: tasks });
-        dispatch({ type: 'LOAD_CATEGORIES', payload: categories });
+        dispatch({ type: 'LOAD_TASKS', payload: tasks }); // 加载任务
+        dispatch({ type: 'LOAD_CATEGORIES', payload: categories }); // 加载分类
         setActionMsg('已从 WebDAV 恢复数据，并刷新任务列表');
       } catch (e) {
         console.error('刷新任务与分类失败', e);

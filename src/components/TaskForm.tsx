@@ -24,50 +24,57 @@ import { useApp } from '../context/AppContext';
 import { Task } from '../types';
 import { triggerConfetti } from '../utils/confetti';
 
+// 任务表单属性接口
 interface TaskFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  editingTask?: Task | null;
+  isOpen: boolean; // 是否打开
+  onClose: () => void; // 关闭回调
+  editingTask?: Task | null; // 编辑的任务
   defaultType?: 'task' | 'habit'; // 默认类型，由父组件决定
 }
 
+// 任务表单组件
 export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask, defaultType = 'task' }) => {
+  // 获取应用上下文的 dispatch
   const { dispatch } = useApp();
+  // 表单数据状态
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: defaultType,
-    priority: 'medium' as 'low' | 'medium' | 'high',
-    deadline: null as Date | null,
-    isStarred: false,
+    title: '', // 标题
+    description: '', // 描述
+    type: defaultType, // 类型
+    priority: 'medium' as 'low' | 'medium' | 'high', // 优先级
+    deadline: null as Date | null, // 截止时间
+    isStarred: false, // 是否星标
   });
 
+  // 重置表单
   const resetForm = useCallback(() => {
     setFormData({
-      title: '',
-      description: '',
-      type: defaultType,
-      priority: 'medium',
-      deadline: null,
-      isStarred: false,
+      title: '', // 清空标题
+      description: '', // 清空描述
+      type: defaultType, // 重置为默认类型
+      priority: 'medium', // 重置优先级
+      deadline: null, // 清空截止时间
+      isStarred: false, // 重置星标
     });
   }, [defaultType]);
 
+  // 当编辑任务或对话框打开时更新表单数据
   useEffect(() => {
     if (editingTask) {
       setFormData({
-        title: editingTask.title || '',
-        description: editingTask.description || '',
-        type: editingTask.type || defaultType,
-        priority: editingTask.priority || 'medium',
-        deadline: editingTask.deadline ? new Date(editingTask.deadline) : null,
-        isStarred: editingTask.isStarred || false,
+        title: editingTask.title || '', // 设置标题
+        description: editingTask.description || '', // 设置描述
+        type: editingTask.type || defaultType, // 设置类型
+        priority: editingTask.priority || 'medium', // 设置优先级
+        deadline: editingTask.deadline ? new Date(editingTask.deadline) : null, // 设置截止时间
+        isStarred: editingTask.isStarred || false, // 设置星标
       });
     } else {
-      resetForm();
+      resetForm(); // 重置表单
     }
   }, [editingTask, isOpen, defaultType, resetForm]);
 
+  // 处理表单提交
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -84,7 +91,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
           description: formData.description.trim(),
           type: formData.type,
           priority: formData.priority,
-          category: 'personal',
+          category: 'uncategorized',
           deadline: formData.deadline || undefined,
           tags: [],
           isStarred: formData.isStarred,
@@ -108,7 +115,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
           description: formData.description.trim(),
           type: formData.type,
           priority: formData.priority,
-          category: 'personal',
+          category: 'uncategorized',
           deadline: formData.deadline || undefined,
           tags: [],
           isStarred: formData.isStarred,
@@ -142,10 +149,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({ isOpen, onClose, editingTask
     }
   };
 
+  // 处理关闭
   const handleClose = () => {
     onClose();
     if (!editingTask) {
-      resetForm();
+      resetForm(); // 如果不是编辑模式，重置表单
     }
   };
 

@@ -147,7 +147,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
     const MIN_VISIBLE_PROGRESS = 2; // 2%
     let progressPercentage = 0;
 
-    // 使用“今天零点”为锚点，表示现在到 DDL 的接近度
+    // 使用"今天零点"为锚点，表示现在到 DDL 的接近度
     const anchor = startOfDay(now);
     const totalTimeFromAnchor = deadline.getTime() - anchor.getTime();
     if (totalTimeFromAnchor > 0) {
@@ -166,32 +166,32 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
 
     if (remainingTime < 0) {
       statusColor = theme.palette.error.main;
-      statusText = '已逾期';
+      statusText = '已逾期'; // 已逾期
     } else if (daysRemaining === 0) {
       statusColor = theme.palette.warning.main;
       const minutesRemaining = Math.max(1, differenceInMinutes(deadline, now));
       if (minutesRemaining < 60) {
-        statusText = `剩余${minutesRemaining}分钟`;
+        statusText = `剩余${minutesRemaining}分钟`; // 剩余分钟
       } else {
-        statusText = hoursRemaining <= 12 ? `${hoursRemaining}小时后截止` : '今天截止';
+        statusText = hoursRemaining <= 12 ? `${hoursRemaining}小时后截止` : '今天截止'; // 今天截止
       }
     } else if (daysRemaining === 1) {
       statusColor = theme.palette.warning.light;
-      statusText = '明天截止';
+      statusText = '明天截止'; // 明天截止
     } else if (daysRemaining <= 3) {
       statusColor = theme.palette.info.main;
-      statusText = `${daysRemaining}天后截止`;
+      statusText = `${daysRemaining}天后截止`; // 几天后截止
     } else {
-      statusText = `剩余${daysRemaining}天`;
+      statusText = `剩余${daysRemaining}天`; // 剩余天数
     }
 
-    return {
-      progressPercentage,
-      statusColor,
-      statusText,
-      daysRemaining,
-      remainingTime,
-      deadline,
+     return {
+      progressPercentage, // 进度百分比
+      statusColor, // 状态颜色
+      statusText, // 状态文本
+      daysRemaining, // 剩余天数
+      remainingTime, // 剩余时间
+      deadline, // 截止时间
     };
   };
 

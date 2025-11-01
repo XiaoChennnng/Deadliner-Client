@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+/**
+ * Deadliner 主应用程序组件
+ * 负责整体布局、主题管理和页面路由
+ */
+
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
   Box,
   useMediaQuery,
+  CircularProgress,
 } from '@mui/material';
 import { AppProvider } from './context/AppContext';
 import { createAppTheme, themePalettes } from './theme/themes';
@@ -11,18 +17,26 @@ import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskListMUI';
 import { TaskForm } from './components/TaskForm';
 import { Task } from './types';
-import { OverviewPage } from './components/OverviewPage';
-import { HabitsPage } from './components/HabitsPage';
-import { ArchivePage } from './components/ArchivePage';
-import { AIGenerationPage } from './components/AIGenerationPage';
-import { SettingsPage } from './components/SettingsPage';
 
+// 懒加载页面组件以优化启动性能
+const OverviewPage = lazy(() => import('./components/OverviewPage').then(module => ({ default: module.OverviewPage })));
+const HabitsPage = lazy(() => import('./components/HabitsPage').then(module => ({ default: module.HabitsPage })));
+const ArchivePage = lazy(() => import('./components/ArchivePage').then(module => ({ default: module.ArchivePage })));
+const AIGenerationPage = lazy(() => import('./components/AIGenerationPage').then(module => ({ default: module.AIGenerationPage })));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then(module => ({ default: module.SettingsPage })));
+
+/**
+ * 仪表板组件 - 显示任务列表和任务表单
+ * @param onEditTask 编辑任务的回调函数
+ */
 const Dashboard: React.FC<{ onEditTask: (task: Task) => void }> = ({ onEditTask }) => {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
 
   return (
     <Box sx={{ flex: 1, overflow: 'hidden' }}>
+      {/* 任务列表组件 */}
       <TaskList onAddTask={() => setIsTaskFormOpen(true)} onEditTask={onEditTask} />
+      {/* 任务创建/编辑表单 */}
       <TaskForm
         isOpen={isTaskFormOpen}
         onClose={() => setIsTaskFormOpen(false)}
@@ -53,27 +67,39 @@ const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, ico
   </Box>
 );
 
+/**
+ * 主应用程序函数
+ * 管理全局状态和页面导航
+ */
 function App() {
+  // 页面状态管理
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // 主题状态管理
   const [darkMode, setDarkMode] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [themeColor, setThemeColor] = useState<keyof typeof themePalettes>('purple');
 
+  // 检测系统主题偏好
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
+  // 根据系统主题自动切换深色模式
   useEffect(() => {
     setDarkMode(prefersDarkMode);
   }, [prefersDarkMode]);
 
+  // 全局键盘快捷键处理
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+N: 打开新任务表单
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
         setIsTaskFormOpen(true);
       }
 
+      // Ctrl+/: 聚焦搜索框
       if (e.ctrlKey && e.key === '/') {
         e.preventDefault();
         const searchInput = document.querySelector('input[name="search"]') as HTMLInputElement;
@@ -82,6 +108,7 @@ function App() {
         }
       }
 
+      // Ctrl+Shift+A: 切换到AI生成页面
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
         setCurrentPage('ai-generation');
@@ -119,37 +146,65 @@ function App() {
     setIsTaskFormOpen(true);
   };
 
-  const handleAIGeneration = () => {
-    setCurrentPage('ai-generation');
-  };
+
 
   const handleNavigation = (page: string) => {
     setCurrentPage(page);
     setMobileOpen(false);
   };
 
+  /**
+   * 根据当前页面渲染对应的组件
+   * 使用Suspense包装懒加载组件，提供加载状态
+   */
   const renderCurrentPage = () => {
+    // 懒加载时的加载指示器
+    const LoadingFallback = () => (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <CircularProgress />
+      </Box>
+    );
+
+    // 根据当前页面返回对应的组件
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard onEditTask={handleEditTask} />;
       case 'add-task':
         return <Dashboard onEditTask={handleEditTask} />;
       case 'overview':
-        return <OverviewPage />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <OverviewPage />
+          </Suspense>
+        );
       case 'habits':
-        return <HabitsPage onAddHabit={handleQuickAdd} onEditHabit={handleEditTask} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <HabitsPage onAddHabit={handleQuickAdd} onEditHabit={handleEditTask} />
+          </Suspense>
+        );
       case 'archive':
-        return <ArchivePage />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ArchivePage />
+          </Suspense>
+        );
       case 'ai-generation':
-        return <AIGenerationPage />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <AIGenerationPage />
+          </Suspense>
+        );
       case 'settings':
         return (
-          <SettingsPage
-            darkMode={darkMode}
-            onThemeToggle={handleThemeToggle}
-            themeColor={themeColor}
-            onThemeColorChange={handleThemeColorChange}
-          />
+          <Suspense fallback={<LoadingFallback />}>
+            <SettingsPage
+              darkMode={darkMode}
+              onThemeToggle={handleThemeToggle}
+              themeColor={themeColor}
+              onThemeColorChange={handleThemeColorChange}
+            />
+          </Suspense>
         );
       default:
         return <PlaceholderPage title={currentPage} icon="🔧" />;

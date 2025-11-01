@@ -9,7 +9,6 @@ import {
   Chip,
   Stack,
   Paper,
-  Divider,
 } from '@mui/material';
 import {
   Clock,
@@ -23,7 +22,9 @@ import { useApp } from '../context/AppContext';
 import { differenceInDays, differenceInHours, differenceInMinutes, format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
+// 概览页面组件
 export const OverviewPage: React.FC = () => {
+  // 获取应用状态
   const { state } = useApp();
 
   // 获取未完成且未归档的任务
@@ -39,12 +40,12 @@ export const OverviewPage: React.FC = () => {
         if (!task.deadline) return false;
         const deadline = new Date(task.deadline);
         const daysUntil = differenceInDays(deadline, now);
-        return daysUntil >= 0 && daysUntil <= 7;
+        return daysUntil >= 0 && daysUntil <= 7; // 7天内且未过期
       })
       .sort((a, b) => {
         const aTime = a.deadline ? new Date(a.deadline).getTime() : Infinity;
         const bTime = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-        return aTime - bTime;
+        return aTime - bTime; // 按截止时间升序排序
       });
   }, [activeTasks]);
 
@@ -54,12 +55,12 @@ export const OverviewPage: React.FC = () => {
     return activeTasks
       .filter(task => {
         if (!task.deadline) return false;
-        return new Date(task.deadline) < now;
+        return new Date(task.deadline) < now; // 已过期
       })
       .sort((a, b) => {
         const aTime = a.deadline ? new Date(a.deadline).getTime() : 0;
         const bTime = b.deadline ? new Date(b.deadline).getTime() : 0;
-        return aTime - bTime;
+        return aTime - bTime; // 按截止时间升序排序
       });
   }, [activeTasks]);
 
@@ -73,17 +74,17 @@ export const OverviewPage: React.FC = () => {
     return activeTasks.filter(task => {
       if (!task.deadline) return false;
       const deadline = new Date(task.deadline);
-      return deadline >= today && deadline < tomorrow;
+      return deadline >= today && deadline < tomorrow; // 今天截止的任务
     });
   }, [activeTasks]);
 
   // 统计数据
   const stats = useMemo(() => {
-    const total = state.tasks.filter(t => !t.isArchived).length;
-    const completed = state.tasks.filter(t => t.completed && !t.isArchived).length;
-    const active = activeTasks.length;
-    const overdue = overdueTasks.length;
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const total = state.tasks.filter(t => !t.isArchived).length; // 总任务数（未归档）
+    const completed = state.tasks.filter(t => t.completed && !t.isArchived).length; // 已完成数
+    const active = activeTasks.length; // 活跃任务数
+    const overdue = overdueTasks.length; // 逾期任务数
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0; // 完成率
 
     return { total, completed, active, overdue, completionRate };
   }, [state.tasks, activeTasks, overdueTasks]);
@@ -96,23 +97,23 @@ export const OverviewPage: React.FC = () => {
     const minutes = differenceInMinutes(deadline, now) % 60;
 
     if (days > 0) {
-      return `${days}天 ${hours}小时`;
+      return `${days}天 ${hours}小时`; // 多天
     } else if (hours > 0) {
-      return `${hours}小时 ${minutes}分钟`;
+      return `${hours}小时 ${minutes}分钟`; // 今天内
     } else if (minutes > 0) {
-      return `${minutes}分钟`;
+      return `${minutes}分钟`; // 不到一小时
     } else {
-      return '即将到期';
+      return '即将到期'; // 即将到期
     }
   };
 
   // 获取优先级颜色
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+      case 'high': return 'error'; // 高优先级
+      case 'medium': return 'warning'; // 中优先级
+      case 'low': return 'success'; // 低优先级
+      default: return 'default'; // 默认
     }
   };
 

@@ -1,8 +1,13 @@
+/**
+ * Deadliner 应用程序上下文
+ * 提供全局状态管理和数据操作功能
+ */
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Task, Category } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-// 初始状态
+// 初始应用程序状态
 const initialState: AppState = {
   user: null,
   tasks: [],
@@ -21,6 +26,14 @@ const initialState: AppState = {
 
 // 检查是否在Electron环境中
 const isElectron = typeof window !== 'undefined' && window.electron;
+
+// 数据缓存，用于存储任务和分类数据
+const cache = new Map<string, any>();
+const dataCache = {
+  get: (key: string) => cache.get(key),
+  set: (key: string, value: any) => cache.set(key, value),
+  invalidate: (key: string) => cache.delete(key)
+};
 
 // 动作类型
 export type AppAction =
@@ -116,6 +129,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         createdAt: action.payload.createdAt || new Date(),
         updatedAt: action.payload.updatedAt || new Date(),
       };
+      dataCache.invalidate('tasks'); // 使任务缓存失效
       return {
         ...state,
         tasks: [...state.tasks, newTask],
@@ -233,7 +247,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         categories: state.categories.filter(category => category.id !== action.payload),
-        // Also update tasks that have this category
+        // 同时更新属于此分类的任务
         tasks: state.tasks.map(task =>
           task.category === action.payload
             ? { ...task, category: 'uncategorized', updatedAt: new Date() }
@@ -246,25 +260,38 @@ function appReducer(state: AppState, action: AppAction): AppState {
   }
 }
 
-// Context
+  // 上下文
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
 } | null>(null);
 
-// Provider component
+  // 提供者组件
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Load tasks from database on mount
+  // 组件挂载时从数据库加载任务，支持缓存
   useEffect(() => {
     const loadData = async () => {
       if (isElectron) {
         try {
           dispatch({ type: 'SET_LOADING', payload: true });
-          const tasks = await window.electron.storage.getTasks();
-          const categories = await window.electron.storage.getCategories();
-          console.log('Loaded tasks from database:', tasks.length, 'tasks');
+
+          // 尝试从缓存加载
+          let tasks = dataCache.get('tasks');
+          let categories = dataCache.get('categories');
+
+          if (!tasks) {
+            tasks = await window.electron.storage.getTasks();
+            dataCache.set('tasks', tasks);
+          }
+
+          if (!categories) {
+            categories = await window.electron.storage.getCategories();
+            dataCache.set('categories', categories);
+          }
+
+          console.log('Loaded tasks from cache/database:', tasks.length, 'tasks');
           dispatch({ type: 'LOAD_TASKS', payload: tasks });
           dispatch({ type: 'LOAD_CATEGORIES', payload: categories });
         } catch (error) {
@@ -277,7 +304,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     loadData();
   }, []);
 
-  // Sync tasks to database whenever they change
+  // 数据变化时更新缓存
+  useEffect(() => {
+    if (state.tasks.length > 0) {
+      dataCache.set('tasks', state.tasks);
+    }
+  }, [state.tasks]);
+
+  useEffect(() => {
+    if (state.categories.length > 0) {
+      dataCache.set('categories', state.categories);
+    }
+  }, [state.categories]);
+
+  // 任务变化时同步到数据库
   useEffect(() => {
     if (isElectron && state.tasks.length > 0 && !state.loading) {
       // This effect will run after tasks are loaded and modified
@@ -301,7 +341,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   );
 };
 
-// Hook to use the context
+  // 使用上下文的钩子
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {

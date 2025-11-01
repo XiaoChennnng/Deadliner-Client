@@ -25,6 +25,7 @@ import {
   FormControlLabel,
   Select,
   MenuItem,
+  InputLabel,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -43,64 +44,105 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { triggerConfetti } from '../utils/confetti';
+import {
+  AI_PROVIDERS,
+  AIProviderId,
+  callAIAPI,
+  AuthManager,
+  RateLimiter,
+  QuotaManager,
+  type AIProvider
+} from '../utils/aiApi';
 
+// AI 生成的任务接口
 interface GeneratedTask {
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  deadline?: Date;
-  type?: 'task' | 'habit' | 'unknown'; // 添加类型字段，包含 unknown
+  title: string; // 任务标题
+  description: string; // 任务描述
+  priority: 'high' | 'medium' | 'low'; // 优先级
+  deadline?: Date; // 截止时间
+  type?: 'task' | 'habit' | 'unknown'; // 任务类型，包含未知类型
 }
 
-interface GuidedPrompt {
-  goalType: string;
-  timeframe: string;
-  specificGoal: string;
-  currentLevel: string;
-  constraints: string;
-  additionalInfo: string;
-}
 
+
+// 缺失信息接口
 interface MissingInfo {
   missingFields: string[]; // 缺失的字段：time, goal, detail, priority, type 等
-  reason: string; // AI给出的缺失原因
+  reason: string; // AI 给出的缺失原因
 }
 
+// AI 智能生成页面组件
 export const AIGenerationPage: React.FC = () => {
-  const { state, dispatch } = useApp();
+  // 获取应用上下文的 dispatch 函数
+  const { dispatch } = useApp();
+  // 用户输入的提示文本
   const [prompt, setPrompt] = useState('');
+  // 加载状态
   const [loading, setLoading] = useState(false);
+  // 错误信息
   const [error, setError] = useState<string | null>(null);
+  // 生成的任务列表
   const [generatedTasks, setGeneratedTasks] = useState<GeneratedTask[]>([]);
+  // 设置对话框开关
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 引导对话框开关
   const [guidedDialogOpen, setGuidedDialogOpen] = useState(false);
+  // 缺失信息
   const [missingInfo, setMissingInfo] = useState<MissingInfo | null>(null);
+  // 原始提示文本
   const [originalPrompt, setOriginalPrompt] = useState('');
+  // 类型选择对话框开关
   const [typeSelectDialogOpen, setTypeSelectDialogOpen] = useState(false);
+  // 要添加的任务
   const [taskToAdd, setTaskToAdd] = useState<GeneratedTask | null>(null);
 
   // 补充信息的表单状态
   const [supplementForm, setSupplementForm] = useState({
-    deadline: null as Date | null,
-    detailedGoal: '',
-    priority: 'medium',
-    additionalInfo: '',
-    type: '' as '' | 'task' | 'habit', // 添加类型字段
+    deadline: null as Date | null, // 截止时间
+    detailedGoal: '', // 详细目标
+    priority: 'medium', // 优先级
+    additionalInfo: '', // 补充信息
+    type: '' as '' | 'task' | 'habit', // 任务类型
   });
 
-  // API设置
-  const [apiKey, setApiKey] = useState(localStorage.getItem('deepseek_api_key') || '');
-  const [baseUrl, setBaseUrl] = useState(
-    localStorage.getItem('deepseek_base_url') || 'https://api.deepseek.com'
+  // 选中的 AI 提供商
+  const [selectedProvider, setSelectedProvider] = useState<AIProviderId>(
+    (localStorage.getItem('ai_selected_provider') as AIProviderId) || 'deepseek'
   );
+  // 提供商配置
+  const [providerConfigs, setProviderConfigs] = useState<Record<AIProviderId, { apiKey: string; baseUrl: string }>>(() => {
+    const configs: Record<AIProviderId, { apiKey: string; baseUrl: string }> = {} as any;
+    Object.keys(AI_PROVIDERS).forEach(providerId => {
+      const id = providerId as AIProviderId;
+      configs[id] = {
+        apiKey: localStorage.getItem(`ai_api_key_${id}`) || '', // API 密钥
+        baseUrl: localStorage.getItem(`ai_base_url_${id}`) || AI_PROVIDERS[id].baseUrl, // 基础 URL
+      };
+    });
+    return configs;
+  });
 
+  // 保存设置
   const saveSettings = () => {
-    localStorage.setItem('deepseek_api_key', apiKey);
-    localStorage.setItem('deepseek_base_url', baseUrl);
+    const config = providerConfigs[selectedProvider];
+    if (!config.apiKey.trim()) {
+      setError('请输入 API Key');
+      return;
+    }
+
+    localStorage.setItem('ai_selected_provider', selectedProvider);
+    localStorage.setItem(`ai_api_key_${selectedProvider}`, config.apiKey);
+    localStorage.setItem(`ai_base_url_${selectedProvider}`, config.baseUrl);
+
+    // 更新认证管理器
+    const authManager = AuthManager.getInstance();
+    authManager.setAuth(selectedProvider, config.apiKey, config.baseUrl);
+
     setSettingsOpen(false);
     setError(null);
   };
 
+  // 重置补充表单
   const resetSupplementForm = () => {
     setSupplementForm({
       deadline: null,
@@ -113,28 +155,36 @@ export const AIGenerationPage: React.FC = () => {
     setOriginalPrompt('');
   };
 
+  // 检查提示文本的清晰度
   const checkPromptClarity = async (text: string): Promise<MissingInfo | null> => {
-    // 使用 DeepSeek AI 判断需求是否明确，并返回缺失的信息
+    const config = providerConfigs[selectedProvider];
+    if (!config.apiKey) return null;
+
+    const provider: AIProvider = {
+      ...AI_PROVIDERS[selectedProvider],
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+    };
+
+    // 检查限流
+    const rateLimiter = RateLimiter.getInstance();
+    if (!rateLimiter.canMakeRequest(selectedProvider)) {
+      setError('请求过于频繁，请稍后再试');
+      return null;
+    }
+
     try {
-      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            {
-              role: 'system',
-              content: `你是一个需求分析助手。判断用户的需求描述是否明确，并识别缺失的信息。
+      const response = await callAIAPI(provider, [
+        {
+          role: 'system',
+          content: `你是一个需求分析助手。判断用户的需求描述是否明确，并识别缺失的信息。
 
 如果需求明确，返回：{"isClear": true}
 
 如果需求不明确，返回：
 {
   "isClear": false,
-  "missingFields": ["time", "goal", "detail", "type"],
+  "missingFields": ["time", "goal", "detail", "priority", "type"],
   "reason": "缺少具体的时间范围和详细目标描述"
 }
 
@@ -146,20 +196,15 @@ missingFields 可能的值：
 - "type": 无法判断是任务还是习惯
 
 只返回 JSON，不要其他文字。`
-            },
-            { role: 'user', content: text },
-          ],
-          temperature: 0.3,
-          stream: false,
-        }),
-      });
+        },
+        { role: 'user', content: text },
+      ], { temperature: 0.3 });
 
-      if (!response.ok) {
+      if (!response.success || !response.content) {
         return null; // API 调用失败，默认认为明确
       }
 
-      const data = await response.json();
-      const content = data.choices[0].message.content.trim();
+      const content = response.content.trim();
 
       // 清理可能的代码块标记
       let cleanContent = content;
@@ -185,9 +230,11 @@ missingFields 可能的值：
     }
   };
 
+  // 生成任务
   const generateTasks = async () => {
-    if (!apiKey) {
-      setError('请先配置 DeepSeek API Key');
+    const config = providerConfigs[selectedProvider];
+    if (!config.apiKey) {
+      setError(`请先配置 ${AI_PROVIDERS[selectedProvider].name} API Key`);
       setSettingsOpen(true);
       return;
     }
@@ -215,12 +262,40 @@ missingFields 可能的值：
     await generateTaskWithAI(prompt);
   };
 
+  // 使用 AI 生成任务
   const generateTaskWithAI = async (userPrompt: string) => {
+    const config = providerConfigs[selectedProvider];
+    if (!config.apiKey) {
+      setError('请先配置 API Key');
+      setSettingsOpen(true);
+      return;
+    }
+
+    // 检查限流
+    const rateLimiter = RateLimiter.getInstance();
+    if (!rateLimiter.canMakeRequest(selectedProvider)) {
+      setError('请求过于频繁，请稍后再试');
+      return;
+    }
+
+    // 检查配额
+    const quotaManager = QuotaManager.getInstance();
+    if (!quotaManager.canUseQuota(selectedProvider)) {
+      setError('已达到 API 使用配额限制');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setGeneratedTasks([]);
 
     try {
+      const provider: AIProvider = {
+        ...AI_PROVIDERS[selectedProvider],
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+      };
+
       // 获取当前时区、日期、语言信息
       const now = new Date();
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -253,31 +328,17 @@ missingFields 可能的值：
 
       const todayHint = `当前日期：${currentDate}；当前时间：${currentDateTime}；设备语言：${locale}；时区：${timeZone}。请严格按上述格式输出 JSON。`;
 
-      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: todayHint },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-          stream: false,
-        }),
-      });
+      const response = await callAIAPI(provider, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: todayHint },
+        { role: 'user', content: userPrompt },
+      ], { temperature: 0.7 });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'API 调用失败');
+      if (!response.success || !response.content) {
+        throw new Error(response.error || 'API 调用失败');
       }
 
-      const data = await response.json();
-      const content = data.choices[0].message.content;
+      const content = response.content;
 
       // Parse JSON response - 现在只解析单个任务对象
       let task: GeneratedTask;
@@ -326,6 +387,7 @@ missingFields 可能的值：
     }
   };
 
+  // 处理补充信息并重新生成
   const handleSupplementAndRegenerate = async () => {
     if (!missingInfo || !originalPrompt) return;
 
@@ -371,6 +433,7 @@ missingFields 可能的值：
     await generateTaskWithAI(enhancedPrompt);
   };
 
+  // 添加任务
   const addTask = (task: GeneratedTask) => {
     // 检查类型是否需要用户选择
     if (!task.type || task.type === 'unknown') {
@@ -387,7 +450,7 @@ missingFields 可能的值：
         description: task.description,
         type: task.type,
         priority: task.priority,
-        category: 'personal',
+        category: 'uncategorized',
         tags: [],
         deadline: task.deadline,
         completed: false,
@@ -405,6 +468,7 @@ missingFields 可能的值：
     setGeneratedTasks(tasks => tasks.filter(t => t !== task));
   };
 
+  // 确认添加带类型的任务
   const confirmAddTaskWithType = (type: 'task' | 'habit') => {
     if (!taskToAdd) return;
 
@@ -415,7 +479,7 @@ missingFields 可能的值：
         description: taskToAdd.description,
         type: type,
         priority: taskToAdd.priority,
-        category: 'personal',
+        category: 'uncategorized',
         tags: [],
         deadline: taskToAdd.deadline,
         completed: false,
@@ -437,31 +501,14 @@ missingFields 可能的值：
     setTaskToAdd(null);
   };
 
-  const addAllTasks = () => {
-    generatedTasks.forEach(task => {
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          title: task.title,
-          description: task.description,
-          type: 'task',
-          priority: task.priority,
-          category: 'personal',
-          tags: [],
-          deadline: task.deadline,
-          completed: false,
-          isStarred: false,
-          isArchived: false,
-        },
-      });
-    });
-    setGeneratedTasks([]);
-  };
 
+
+  // 移除任务
   const removeTask = (task: GeneratedTask) => {
     setGeneratedTasks(tasks => tasks.filter(t => t !== task));
   };
 
+  // 获取优先级颜色
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'error';
@@ -471,7 +518,8 @@ missingFields 可能的值：
     }
   };
 
-  const hasApiKey = !!apiKey;
+  // 检查是否有 API 密钥
+  const hasApiKey = !!providerConfigs[selectedProvider]?.apiKey;
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -492,7 +540,7 @@ missingFields 可能的值：
             AI 智能规划
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            使用 DeepSeek 智能分解任务和目标
+            使用 {AI_PROVIDERS[selectedProvider].name} 智能分解任务和目标
           </Typography>
         </Box>
         <IconButton onClick={() => setSettingsOpen(true)} size="large">
@@ -663,28 +711,72 @@ missingFields 可能的值：
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>DeepSeek API 配置</DialogTitle>
+        <DialogTitle>AI API 配置</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>AI 提供商</InputLabel>
+              <Select
+                value={selectedProvider}
+                onChange={(e) => setSelectedProvider(e.target.value as AIProviderId)}
+                label="AI 提供商"
+              >
+                {Object.entries(AI_PROVIDERS).map(([id, provider]) => (
+                  <MenuItem key={id} value={id}>
+                    {provider.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <Alert severity="info" icon={<AlertCircle size={20} />}>
-              请访问 <a href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer">platform.deepseek.com</a> 申请 API Key
+              {selectedProvider === 'deepseek' && (
+                <>请访问 <a href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer">platform.deepseek.com</a> 申请 API Key</>
+              )}
+              {selectedProvider === 'claude' && (
+                <>请访问 <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> 申请 API Key</>
+              )}
+              {(selectedProvider === 'gpt4' || selectedProvider === 'gpt35' || selectedProvider === 'gpt4turbo') && (
+                <>请访问 <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer">platform.openai.com</a> 申请 API Key</>
+              )}
+              {selectedProvider === 'qwen' && (
+                <>请访问 <a href="https://dashscope.aliyun.com" target="_blank" rel="noopener noreferrer">dashscope.aliyun.com</a> 申请 API Key</>
+              )}
+              {selectedProvider === 'kimi' && (
+                <>请访问 <a href="https://platform.moonshot.cn" target="_blank" rel="noopener noreferrer">platform.moonshot.cn</a> 申请 API Key</>
+              )}
             </Alert>
+
             <TextField
               label="API Key"
               fullWidth
               type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              value={providerConfigs[selectedProvider]?.apiKey || ''}
+              onChange={(e) => setProviderConfigs(prev => ({
+                ...prev,
+                [selectedProvider]: {
+                  ...prev[selectedProvider],
+                  apiKey: e.target.value
+                }
+              }))}
               placeholder="sk-..."
               helperText="您的 API Key 将存储在本地浏览器中"
             />
+
             <TextField
               label="Base URL"
               fullWidth
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              helperText="默认: https://api.deepseek.com"
+              value={providerConfigs[selectedProvider]?.baseUrl || ''}
+              onChange={(e) => setProviderConfigs(prev => ({
+                ...prev,
+                [selectedProvider]: {
+                  ...prev[selectedProvider],
+                  baseUrl: e.target.value
+                }
+              }))}
+              helperText={`默认: ${AI_PROVIDERS[selectedProvider].baseUrl}`}
             />
+
             <Alert severity="warning">
               注意：API Key 仅存储在您的浏览器本地，不会上传到任何服务器
             </Alert>
@@ -692,7 +784,11 @@ missingFields 可能的值：
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSettingsOpen(false)}>取消</Button>
-          <Button onClick={saveSettings} variant="contained" disabled={!apiKey}>
+          <Button
+            onClick={saveSettings}
+            variant="contained"
+            disabled={!providerConfigs[selectedProvider]?.apiKey}
+          >
             保存配置
           </Button>
         </DialogActions>

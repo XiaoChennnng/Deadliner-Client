@@ -29,26 +29,32 @@ import {
 import { useApp } from '../context/AppContext';
 import { getNextEncouragement } from '../utils/encouragementService';
 
+// 侧边栏属性接口
 interface SidebarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-  darkMode: boolean;
-  onThemeToggle: () => void;
-  mobileOpen: boolean;
-  onDrawerToggle: () => void;
+  currentPage: string; // 当前页面
+  onNavigate: (page: string) => void; // 导航回调
+  darkMode: boolean; // 深色模式
+  onThemeToggle: () => void; // 主题切换回调
+  mobileOpen: boolean; // 移动端抽屉开关
+  onDrawerToggle: () => void; // 抽屉切换回调
 }
 
+// 侧边栏组件
 export const Sidebar: React.FC<SidebarProps> = ({
-  currentPage,
-  onNavigate,
-  darkMode,
-  onThemeToggle,
-  mobileOpen,
-  onDrawerToggle
+  currentPage, // 当前页面
+  onNavigate, // 导航函数
+  darkMode, // 深色模式状态
+  onThemeToggle, // 主题切换
+  mobileOpen, // 移动端打开状态
+  onDrawerToggle // 抽屉切换
 }) => {
+  // 获取应用状态
   const { state } = useApp();
+  // 主题
   const theme = useTheme();
+  // 是否为移动端
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  // 鼓励语状态
   const [encouragement, setEncouragement] = useState('任务完成 ✓ 奖励：硬大战！😎');
 
   // 当有任务完成时更新鼓励语
@@ -65,23 +71,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [state.tasks]);
 
+  // 导航项配置
   const navItems = [
     {
-      section: encouragement,
+      section: encouragement, // 鼓励语部分
       items: [
         { id: 'dashboard', icon: TaskIcon, label: '任务', badge: null },
         { id: 'habits', icon: Target, label: '习惯', badge: null },
       ],
     },
     {
-      section: '',
+      section: '', // 空部分
       items: [
         { id: 'overview', icon: TrendingUp, label: '概览', badge: null },
         { id: 'archive', icon: ArchiveIcon, label: '存档', badge: null },
       ],
     },
     {
-      section: '',
+      section: '', // 空部分
       items: [
         { id: 'ai-generation', icon: Sparkles, label: 'AI规划', badge: null },
         { id: 'settings', icon: SettingsIcon, label: '设置', badge: null },
@@ -89,6 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
+  // 抽屉宽度
   const drawerWidth = 280;
 
   const drawerContent = (

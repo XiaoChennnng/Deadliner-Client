@@ -3,7 +3,6 @@ import {
   Box,
   Grid,
   Typography,
-  Chip,
   IconButton,
   Toolbar,
   AppBar,
@@ -16,7 +15,6 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Paper,
-  Stack,
   Card,
   CardContent,
   Dialog,
@@ -97,11 +95,9 @@ export const TaskList: React.FC<TaskListProps> = ({ onAddTask, onEditTask }) => 
     });
 
     return filtered;
-  }, [state.tasks, state.currentFilter, state.selectedCategory, searchQuery, state.sortBy, state.currentView]);
+  }, [state.tasks, searchQuery, state.sortBy, state.currentView]);
 
-  const handleFilterChange = (filter: typeof state.currentFilter) => {
-    dispatch({ type: 'SET_FILTER', payload: filter });
-  };
+
 
   const handleSortChange = (sortBy: typeof state.sortBy) => {
     dispatch({ type: 'SET_SORT', payload: sortBy });
